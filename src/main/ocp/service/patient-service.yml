@@ -1,0 +1,143 @@
+---
+kind: List
+apiVersion: v1
+items:
+
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    labels:
+      app: patient-service
+    name: patient-service
+  spec:
+    port:
+      targetPort: 8080-tcp
+    subdomain: ""
+    to:
+      kind: Service
+      name: patient-service
+      weight: 100
+    wildcardPolicy: None
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: patient-service
+    name: patient-service
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: patient-service
+      deploymentconfig: patient-service
+    sessionAffinity: None
+    type: ClusterIP
+
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: patient-service
+    name: patient-service
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 2
+    selector:
+      group: naps-healthcare
+      app: patient-service
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 3600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          group: naps-healthcare
+          app: patient-service
+      spec:
+        containers:
+          - env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: database-password
+                  name: postgresql
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  key: database-user
+                  name: postgresql
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: database-name
+                  name: postgresql
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: JAVA_OPTIONS
+              value: >
+                -Dapplication.configmap=patient-service
+                -Dvertx.metrics.options.enabled=true -Dvertx.metrics.options.registryName=prometheus
+            - name: AB_JOLOKIA_OFF
+              value: 'true'
+            imagePullPolicy: IfNotPresent
+            name: patient-service
+            ports:
+              - containerPort: 8080
+                name: http
+                protocol: TCP
+              - containerPort: 9779
+                name: prometheus
+                protocol: TCP
+            resources:
+              limits:
+                cpu: '500m'
+                memory: '500Mi'
+              requests:
+                cpu: '250m'
+                memory: '250Mi'
+            securityContext:
+              privileged: false
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /deployments/config
+              name: config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: patient-service
+        serviceAccountName: patient-service
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: application.properties
+              path: application.properties
+            name: patient-service
+          name: config
+    triggers:
+      - type: ConfigChange
+      - imageChangeParams:
+          automatic: true
+          containerNames:
+            - patient-service
+          from:
+            kind: ImageStreamTag
+            name: "patient-service:0.0.2"
+        type: ImageChange

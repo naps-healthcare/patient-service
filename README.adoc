@@ -1,0 +1,107 @@
+= Patient Service
+
+:numbered:
+
+== Development
+
+== Deployment to OCP
+
+. Build and push to Quay
++
+-----
+cd $NAPS_HEALTHCARE_HOME/patient-service
+
+podman build -f src/main/docker/Dockerfile.jvm -t quay.io/naps_healthcare/patient_service:0.0.1 .
+
+podman push quay.io/naps_healthcare/patient_service:0.0.1
+-----
+
+. OCP resources
++
+-----
+cd $NAPS_HEALTHCARE_HOME/patient-service
+vi src/main/resources/application.properties                                            #   Review runtime properties
+
+oc create configmap patient-service --from-file=src/main/resources/application.properties
+oc create serviceaccount patient-service
+oc policy add-role-to-user view system:serviceaccount:$(oc project --short):datawarehouse
+oc apply -f src/main/ocp/patient-service-imagestream.yml
+oc apply -f src/main/ocp/patient-service.yml
+-----
+
+. Refresh IS
++
+-----
+oc import-image patient_service --all=true --from=quay.io/naps_healthcare/patient_service --confirm
+-----
+
+== Local Dev Environment
+
+. PostgreSQL:
++
+-----
+podman run -d \
+           -p 5432:5432 \
+           -e POSTGRES_PASSWORD=naps \
+           -e POSTGRES_USER=naps \
+           -e POSTGRES_DB=naps_himss \
+           postgres:10.5
+-----
+
+. Seed create and patient table
++
+-----
+psql -h 127.0.01 -U naps -d naps_himss -a -f src/main/sql/patient_with_data.sql
+-----
+
+. Build and run locally
++
+-----
+mvn clean install -DskipTests \
+    && mvn quarkus:build \
+    && java -jar target/patient-service-0.0.1-runner.jar
+----
+
+. Test:
++
+-----
+curl localhost:8080/patients | jq .
+-----
+
+= OCP
+
+. Build and push to Quay
++
+-----
+cd $NAPS_HEALTHCARE_HOME/patient-service
+
+mvn clean install -DskipTests \
+    && mvn quarkus:build
+
+podman build -f src/main/docker/Dockerfile.jvm -t quay.io/naps_healthcare/patient_service:0.0.2 .
+
+podman push quay.io/naps_healthcare/patient_service:0.0.2
+-----
+
+. OCP Resources
++
+-----
+oc apply -f src/main/ocp/service/patient-service-imagestream.yml
+oc create configmap patient-service --from-file=src/main/resources/application.properties
+oc create serviceaccount patient-service
+oc policy add-role-to-user view system:serviceaccount:$(oc project --short):patient-service
+oc apply -f src/main/ocp/service/patient-service.yml
+-----
+
+. Refresh IS
++
+-----
+oc import-image patient-service --all=true --from=quay.io/naps_healthcare/patient_service --confirm
+-----
+
+. Test
++
+-----
+curl -v -X GET $(oc get route patient-service --template='{{ .spec.host }}')/patients | jq .
+-----
+

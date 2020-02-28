@@ -9,7 +9,7 @@ public interface IPatientDAO {
     public List<Patient> getPatients();
     public Patient getPatient(Integer patientId);
     public Integer addPatient(Patient patient);
-    public Integer deletePatient(Patient patient);
-    
+    public void deletePatient(Integer id);
+    public Integer updatePatient(Patient patient);
 
 }

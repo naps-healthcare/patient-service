@@ -8,11 +8,14 @@ import io.quarkus.runtime.StartupEvent;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -36,23 +39,35 @@ public class PatientService {
     }
 
     @GET
+    @Path("/")
     public Response list() {
         return Response.ok(patientDAO.getPatients()).build();
     }
 
     @GET
-    public Response get(Integer patientId){
+    @Path("{id}")
+    public Response get(@PathParam("id") Integer patientId){
         return Response.ok(patientDAO.getPatient(patientId)).build();
     }
 
     @POST
+    @Transactional
     public Response add(Patient patient) {
         return Response.ok(patientDAO.addPatient(patient)).build();
     }
 
     @DELETE
-    public Response delete(Patient patient){
-        return Response.ok(patientDAO.deletePatient(patient)).build();
+    @Transactional
+    @Path("{id}")
+    public Response delete(@PathParam("id") Integer patientId){
+        patientDAO.deletePatient(patientId);
+        return Response.ok().build();
+    }
+
+    @PUT
+    @Transactional
+    public Response update(Patient patient) {
+        return (Response.ok(patientDAO.updatePatient(patient))).build();
     }
 
     void onStop(@Observes ShutdownEvent ev) {

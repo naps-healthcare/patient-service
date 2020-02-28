@@ -1,9 +1,12 @@
 package com.redhat.healthcare.patient.dao;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.ws.rs.NotFoundException;
 
 import com.redhat.healthcare.patient.domain.Patient;
@@ -27,9 +30,16 @@ public class PanachePersonDAO implements IPatientDAO{
         return patient.getId();
 	}
 
-	public Integer deletePatient(Patient patient) {
+	public void deletePatient(Integer id) {
+		Patient patient = this.getPatient(id);
 		patient.delete();
-		return patient.getId();
+	}
+
+	public Integer updatePatient(Patient patient) {
+		Map<String,Object> params = new HashMap<String,Object>();
+		params.put("patientFullName", patient.getPatientFullName());
+		params.put("id", patient.getId());
+		return Patient.update("patientFullName = :patientFullName where id = :id", params);
 	}
     
 }

@@ -139,5 +139,5 @@ items:
             - patient-service
           from:
             kind: ImageStreamTag
-            name: "patient-service:0.0.2"
+            name: "patient-service:0.0.3"
         type: ImageChange

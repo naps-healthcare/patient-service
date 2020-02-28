@@ -2,6 +2,19 @@
 
 :numbered:
 
+== TO-DO
+. Change project name:  himss-planner -> naps_healthcare
+
+. System properties in KIE Server:
++
+-----
+naps_healthcare.optaweb.host.backend.service
+naps_healthcare.patient.host.service
+-----
+
+Pacts -> Teams
+
+
 == Development
 
 == Deployment to OCP
@@ -51,7 +64,7 @@ podman run -d \
 . Seed create and patient table
 +
 -----
-psql -h 127.0.01 -U naps -d naps_himss -a -f src/main/sql/patient_with_data.sql
+psql -h 127.0.0.1 -U naps -d naps_himss -a -f src/main/sql/patient_with_data.sql
 -----
 
 . Build and run locally
@@ -59,13 +72,35 @@ psql -h 127.0.01 -U naps -d naps_himss -a -f src/main/sql/patient_with_data.sql
 -----
 mvn clean install -DskipTests \
     && mvn quarkus:build \
-    && java -jar target/patient-service-0.0.1-runner.jar
+    && java -jar target/patient-service-0.0.3-runner.jar
 ----
 
 . Test:
 +
 -----
-curl localhost:8080/patients | jq .
+curl localhost:8080/openapi                                                 #   OpenAPI spec
+curl localhost:8080/patients | jq .                                         #   list patients
+curl localhost:8080/patients/1 | jq .                                       #   return JSON representation of patient with Id = 1
+curl -v -X POST localhost:8080/patients \
+     -H "Content-Type:application/json" \
+     -d '{"patientFullName": "Haylee Rollins"}'                             #   Create a new patient
+
+curl -v -X DELETE localhost:8080/patients/1                                 #   Delete an existing patient
+
+curl -v -X PUT localhost:8080/patients \
+     -H "Content-Type:application/json" \
+     -d '{"id":'2', "patientFullName": "Haylee Rollins"}'                   #   Update an existing patient
+-----
+
+
+= OCP
+
+. Build and push to Quay
++
+-----
+cd $NAPS_HEALTHCARE_HOME/patient-service
+
+    
 -----
 
 = OCP
@@ -78,9 +113,9 @@ cd $NAPS_HEALTHCARE_HOME/patient-service
 mvn clean install -DskipTests \
     && mvn quarkus:build
 
-podman build -f src/main/docker/Dockerfile.jvm -t quay.io/naps_healthcare/patient_service:0.0.2 .
+podman build -f src/main/docker/Dockerfile.jvm -t quay.io/naps_healthcare/patient_service:0.0.3 .
 
-podman push quay.io/naps_healthcare/patient_service:0.0.2
+podman push quay.io/naps_healthcare/patient_service:0.0.3
 -----
 
 . OCP Resources

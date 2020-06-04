@@ -3,17 +3,16 @@
 :numbered:
 
 == TO-DO
-. Change project name:  himss-planner -> naps_healthcare
 
 . System properties in KIE Server:
 +
 -----
 naps_healthcare.optaweb.host.backend.service
+naps_healthcare.optaweb.host.backend.tenantId
 naps_healthcare.patient.host.service
 -----
 
-Pacts -> Teams
-
+. Pacts -> Teams
 
 == Development
 
@@ -37,7 +36,7 @@ vi src/main/resources/application.properties                                    
 
 oc create configmap patient-service --from-file=src/main/resources/application.properties
 oc create serviceaccount patient-service
-oc policy add-role-to-user view system:serviceaccount:$(oc project --short):datawarehouse
+oc policy add-role-to-user view system:serviceaccount:$(oc project --short)
 oc apply -f src/main/ocp/patient-service-imagestream.yml
 oc apply -f src/main/ocp/patient-service.yml
 -----
@@ -54,14 +53,14 @@ oc import-image patient_service --all=true --from=quay.io/naps_healthcare/patien
 +
 -----
 podman run -d \
-           -p 5432:5432 \
+           --publish 5432:5432 \
            -e POSTGRES_PASSWORD=naps \
            -e POSTGRES_USER=naps \
            -e POSTGRES_DB=naps_himss \
            postgres:10.5
 -----
 
-. Seed create and patient table
+. Seed patient table
 +
 -----
 psql -h 127.0.0.1 -U naps -d naps_himss -a -f src/main/sql/patient_with_data.sql

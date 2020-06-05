@@ -52,12 +52,17 @@ oc import-image patient_service --all=true --from=quay.io/naps_healthcare/patien
 . PostgreSQL:
 +
 -----
+# https://github.com/sclorg/postgresql-container/tree/generated/12
+
+podman login registry.redhat.io -u 
 podman run -d \
            --publish 5432:5432 \
-           -e POSTGRES_PASSWORD=naps \
-           -e POSTGRES_USER=naps \
-           -e POSTGRES_DB=naps_himss \
-           postgres:10.5
+           --name naps_himss \
+           -e POSTGRESQL_USER=naps \
+           -e POSTGRESQL_PASSWORD=naps \
+           -e POSTGRESQL_DATABASE=naps_himss \
+           -e POSTGRESQL_MAX_PREPARED_TRANSACTIONS=10 \
+           registry.redhat.io/rhel8/postgresql-12
 -----
 
 . Seed patient table
